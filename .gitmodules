@@ -1,0 +1,3 @@
+[submodule "docs"]
+	path = docs
+	url = mark-github:mschandr/space-wars-3002-docs.git
