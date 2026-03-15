@@ -33,3 +33,4 @@ go.work.sum
 
 tags
 docs/*
+vendor-dialogue-generator
