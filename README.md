@@ -1,4 +1,4 @@
-# space-wars-3002-text-generation
+# Space Wars 3002 - LLM Dialogue dialogue generation tool
 
 Offline dialogue generator for Space Wars 3002. Reads vendor profiles from the database, generates flavour text using a local `llama.cpp` instance, validates the output, and stores the results. Designed to run as a batch job — no LLM calls happen during gameplay.
 
