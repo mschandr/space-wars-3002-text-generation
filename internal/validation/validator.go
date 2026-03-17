@@ -12,11 +12,9 @@ import (
 var lineNumberPrefix = regexp.MustCompile(`(?i)^(line\s+)?\d+[\.\)\:]\s`)
 
 // metaCommentaryPatterns are substrings that indicate the LLM leaked its reasoning.
+// Keep these specific to LLM leakage — avoid patterns that are also natural vendor speech
+// (e.g. "here's", "certainly", "here are" all appear in legitimate NPC dialogue).
 var metaCommentaryPatterns = []string{
-	"here are",
-	"here's",
-	"certainly",
-	"of course",
 	"as requested",
 	"i'll generate",
 	"sure, here",

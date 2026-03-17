@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"space-wars-3002-text-generation/internal/config"
@@ -30,7 +31,7 @@ func New(cfg *config.Config) *Client {
 }
 
 // Generate calls the LLM and returns the parsed lines.
-// attempt=0 is the first try. attempt>0 lowers temperature and strengthens the JSON instruction.
+// attempt=0 is the first try. attempt>0 lowers temperature and reinforces the plain-list constraint.
 func (c *Client) Generate(system, user string, attempt int) ([]string, error) {
 	temperature := c.cfg.LLMTemperature
 	if attempt > 0 {
@@ -39,8 +40,8 @@ func (c *Client) Generate(system, user string, attempt int) ([]string, error) {
 		if temperature < 0.1 {
 			temperature = 0.1
 		}
-		// Reinforce the JSON-only constraint
-		user = user + "\n\nCRITICAL: Output ONLY the JSON object. No explanations. No preamble. No markdown. No code blocks. Start your response with { and end with }."
+		// Reinforce the plain-list constraint
+		user = user + "\n\nIMPORTANT: Output the numbered list only. No preamble. No commentary. No JSON. Just lines numbered 1. 2. 3. etc."
 	}
 
 	req := ChatRequest{
@@ -93,14 +94,23 @@ func (c *Client) Generate(system, user string, attempt int) ([]string, error) {
 
 	content := chatResp.Choices[0].Message.Content
 
-	var dialogueResp DialogueOutput
-	if err := json.Unmarshal([]byte(content), &dialogueResp); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal dialogue output (malformed JSON): %w", err)
+	lines := splitLines(content)
+	if len(lines) == 0 {
+		return nil, fmt.Errorf("LLM returned no lines")
 	}
 
-	if len(dialogueResp.Lines) == 0 {
-		return nil, fmt.Errorf("LLM returned empty lines array")
-	}
+	return lines, nil
+}
 
-	return dialogueResp.Lines, nil
+// splitLines splits a raw LLM response into individual dialogue lines.
+// Blank lines and lines that are only whitespace are discarded.
+func splitLines(content string) []string {
+	raw := strings.Split(content, "\n")
+	var lines []string
+	for _, line := range raw {
+		if strings.TrimSpace(line) != "" {
+			lines = append(lines, line)
+		}
+	}
+	return lines
 }

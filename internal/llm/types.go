@@ -22,6 +22,3 @@ type ChatResponse struct {
 	Choices []Choice `json:"choices"`
 }
 
-type DialogueOutput struct {
-	Lines []string `json:"lines"`
-}

@@ -112,7 +112,7 @@ func Load() (*Config, error) {
 		}
 	}
 
-	cfg.LLMMaxTokens = 500
+	cfg.LLMMaxTokens = 1024
 	if v := os.Getenv("LLM_MAX_TOKENS"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
 			cfg.LLMMaxTokens = n

@@ -38,9 +38,8 @@ func BuildPrompt(vendor vendors.VendorProfile, lineType, bucket, transactionCont
 // buildSystemPrompt returns the invariant system message per design §9.1.
 func buildSystemPrompt() string {
 	return "You generate short in-universe dialogue for NPC vendors in a space exploration and trading game.\n" +
-		"Output JSON only.\n" +
 		"Each line must be one sentence.\n" +
-		"Do not include explanations.\n" +
+		"Do not include explanations, preamble, or commentary.\n" +
 		"Do not include markdown."
 }
 
@@ -80,7 +79,8 @@ func buildUserPrompt(vendor vendors.VendorProfile, lineType, bucket, transaction
 	b.WriteString("- keep lines in character\n")
 	b.WriteString("- do not mention exact live item condition percentages\n")
 	b.WriteString("- do not invent exact live defects\n")
-	b.WriteString("- return JSON: {\"lines\":[\"...\"]}\n")
+	b.WriteString("- number each line: 1. 2. 3. etc.\n")
+	b.WriteString("- output the numbered list only, nothing else\n")
 
 	return b.String()
 }
