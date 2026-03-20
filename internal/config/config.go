@@ -30,6 +30,7 @@ type Config struct {
 	WorkerCount        int
 	BatchSize          int
 	GenerationRetryMax int
+	VendorRetryMax     int
 	RowsToGenerate     int
 	GenerationVersion  int
 
@@ -155,6 +156,15 @@ func Load() (*Config, error) {
 			cfg.GenerationRetryMax = n
 		} else {
 			errs = append(errs, fmt.Sprintf("GENERATION_RETRY_MAX must be numeric: %v", err))
+		}
+	}
+
+	cfg.VendorRetryMax = 2
+	if v := os.Getenv("VENDOR_RETRY_MAX"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			cfg.VendorRetryMax = n
+		} else {
+			errs = append(errs, fmt.Sprintf("VENDOR_RETRY_MAX must be numeric: %v", err))
 		}
 	}
 

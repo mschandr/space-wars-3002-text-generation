@@ -11,6 +11,7 @@ import (
 	"space-wars-3002-text-generation/internal/logging"
 	"space-wars-3002-text-generation/internal/php"
 	"space-wars-3002-text-generation/internal/prompts"
+	"space-wars-3002-text-generation/internal/stats"
 	"space-wars-3002-text-generation/internal/validation"
 	"space-wars-3002-text-generation/internal/vendors"
 )
@@ -31,15 +32,17 @@ type Orchestrator struct {
 	phpClient *php.Client // nil when UseHTTPAPI is false
 	logger    *logging.Logger
 	cfg       *config.Config
+	stats     *stats.Stats
 }
 
-func New(database *db.DB, llmClient *llm.Client, phpClient *php.Client, logger *logging.Logger, cfg *config.Config) *Orchestrator {
+func New(database *db.DB, llmClient *llm.Client, phpClient *php.Client, logger *logging.Logger, cfg *config.Config, s *stats.Stats) *Orchestrator {
 	return &Orchestrator{
 		db:        database,
 		llm:       llmClient,
 		phpClient: phpClient,
 		logger:    logger,
 		cfg:       cfg,
+		stats:     s,
 	}
 }
 
@@ -145,9 +148,11 @@ func (o *Orchestrator) generateBucket(vendor vendors.VendorProfile, bucket Dialo
 			"inserted":            len(accepted),
 		})
 
+		o.stats.RecordBucketComplete(bucket.LineType, len(accepted), attempt)
 		return nil
 	}
 
+	o.stats.RecordBucketFailed(bucket.LineType)
 	return lastErr
 }
 

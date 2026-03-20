@@ -9,32 +9,30 @@ import (
 	"space-wars-3002-text-generation/internal/llm"
 	"space-wars-3002-text-generation/internal/logging"
 	"space-wars-3002-text-generation/internal/php"
+	"space-wars-3002-text-generation/internal/stats"
 	"space-wars-3002-text-generation/internal/vendors"
 )
 
 // Pool manages a fixed set of worker goroutines that generate dialogue for vendors.
 type Pool struct {
-	workers      int
-	vendorChan   chan vendors.VendorProfile
-	wg           sync.WaitGroup
-	orchestrator *dialogue.Orchestrator
-	logger       *logging.Logger
-}
-
-// Result holds the outcome of processing a single vendor.
-type Result struct {
-	VendorID int64
-	Success  bool
-	Error    string
+	workers       int
+	vendorChan    chan vendors.VendorProfile
+	wg            sync.WaitGroup
+	orchestrator  *dialogue.Orchestrator
+	logger        *logging.Logger
+	stats         *stats.Stats
+	failedMu      sync.Mutex
+	failedVendors []vendors.VendorProfile
 }
 
 // NewPool creates a Pool. phpClient may be nil when UseHTTPAPI is false.
-func NewPool(database *db.DB, llmClient *llm.Client, phpClient *php.Client, logger *logging.Logger, cfg *config.Config) *Pool {
+func NewPool(database *db.DB, llmClient *llm.Client, phpClient *php.Client, logger *logging.Logger, cfg *config.Config, s *stats.Stats) *Pool {
 	return &Pool{
 		workers:      cfg.WorkerCount,
 		vendorChan:   make(chan vendors.VendorProfile, cfg.WorkerCount),
-		orchestrator: dialogue.New(database, llmClient, phpClient, logger, cfg),
+		orchestrator: dialogue.New(database, llmClient, phpClient, logger, cfg, s),
 		logger:       logger,
+		stats:        s,
 	}
 }
 
@@ -51,10 +49,12 @@ func (p *Pool) Submit(vendor vendors.VendorProfile) {
 	p.vendorChan <- vendor
 }
 
-// Close signals no more work and waits for all workers to finish.
-func (p *Pool) Close() {
+// Close signals no more work, waits for all workers to finish, and returns
+// any vendor profiles that failed so the caller can retry them.
+func (p *Pool) Close() []vendors.VendorProfile {
 	close(p.vendorChan)
 	p.wg.Wait()
+	return p.failedVendors
 }
 
 func (p *Pool) worker(id int) {
@@ -80,6 +80,10 @@ func (p *Pool) processVendor(workerID int, vendor vendors.VendorProfile) {
 			"vendor_id": vendor.ID,
 			"error":     err.Error(),
 		})
+		p.stats.RecordVendorFailed()
+		p.failedMu.Lock()
+		p.failedVendors = append(p.failedVendors, vendor)
+		p.failedMu.Unlock()
 		return
 	}
 
@@ -87,4 +91,5 @@ func (p *Pool) processVendor(workerID int, vendor vendors.VendorProfile) {
 		"worker_id": workerID,
 		"vendor_id": vendor.ID,
 	})
+	p.stats.RecordVendorComplete()
 }
